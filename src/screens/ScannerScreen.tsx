@@ -1,13 +1,14 @@
 // Barcode Scanner Screen
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 interface Props {
   onScan: (barcode: string) => void;
+  onClose: () => void;
 }
 
-export default function ScannerScreen({ onScan }: Props) {
+export default function ScannerScreen({ onScan, onClose }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
@@ -22,6 +23,9 @@ export default function ScannerScreen({ onScan }: Props) {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
+        <TouchableOpacity style={styles.backButtonTop} onPress={onClose}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
         <Text style={styles.message}>
           Camera permission is required to scan barcodes
         </Text>
@@ -36,12 +40,12 @@ export default function ScannerScreen({ onScan }: Props) {
     if (scanned) return;
     setScanned(true);
     onScan(data);
-    // Reset after 2 seconds to allow scanning again
     setTimeout(() => setScanned(false), 2000);
   };
 
   return (
     <View style={styles.container}>
+      {/* Camera - no children to avoid warning */}
       <CameraView
         style={styles.camera}
         facing="back"
@@ -49,19 +53,27 @@ export default function ScannerScreen({ onScan }: Props) {
           barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39'],
         }}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.scanArea}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-          </View>
-          <Text style={styles.hint}>
-            {scanned ? 'Processing...' : 'Point at a barcode'}
-          </Text>
+      />
+      
+      {/* Overlay with absolute positioning */}
+      <View style={styles.overlay} pointerEvents="box-none">
+        {/* Back button */}
+        <TouchableOpacity style={styles.backButton} onPress={onClose}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+        
+        {/* Scan frame */}
+        <View style={styles.scanArea}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
         </View>
-      </CameraView>
+        
+        <Text style={styles.hint}>
+          {scanned ? '🐕 Sniffing...' : 'Point at a barcode'}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -70,17 +82,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   camera: {
     flex: 1,
     width: '100%',
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  backButtonTop: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+  },
+  backText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   scanArea: {
     width: 280,
@@ -122,6 +151,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
   message: {
     color: '#fff',

@@ -101,7 +101,10 @@ export default function App() {
         />
       )}
       {screen === 'scanner' && (
-        <ScannerScreen onScan={handleScan} />
+        <ScannerScreen 
+          onScan={handleScan} 
+          onClose={() => setScreen('home')}
+        />
       )}
       {screen === 'product' && currentProduct && (
         <ProductScreen
