@@ -44,7 +44,8 @@
       "supabaseUrl": "${EXPO_PUBLIC_SUPABASE_URL}",
       "supabaseAnonKey": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}",
       "claudeApiKey": "${EXPO_PUBLIC_CLAUDE_API_KEY}",
-      "exaApiKey": "${EXPO_PUBLIC_EXA_API_KEY}"
+      "exaApiKey": "${EXPO_PUBLIC_EXA_API_KEY}",
+      "googleCloudVisionKey": "${EXPO_PUBLIC_GOOGLE_CLOUD_VISION_KEY}"
     }
   }
 }
