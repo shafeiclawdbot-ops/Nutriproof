@@ -39,6 +39,12 @@
           "cameraPermission": "Nutriproof needs camera access to scan food barcodes"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "supabaseUrl": "${EXPO_PUBLIC_SUPABASE_URL}",
+      "supabaseAnonKey": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}",
+      "claudeApiKey": "${EXPO_PUBLIC_CLAUDE_API_KEY}",
+      "exaApiKey": "${EXPO_PUBLIC_EXA_API_KEY}"
+    }
   }
 }

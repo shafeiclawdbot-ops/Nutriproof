@@ -1,4 +1,4 @@
-// Evidence Screen - Display scientific research for an ingredient
+// Evidence Screen - Display AI-synthesized recommendations + scientific research
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { researchIngredient, IngredientResearch, EvidenceItem } from '../services/researchPipeline';
+import { synthesizeResearch, AIRecommendation } from '../services/aiSynthesisService';
 
 interface Props {
   ingredient: string;
@@ -18,9 +19,12 @@ interface Props {
 
 export default function EvidenceScreen({ ingredient, onClose }: Props) {
   const [loading, setLoading] = useState(true);
+  const [synthesizing, setSynthesizing] = useState(false);
   const [research, setResearch] = useState<IngredientResearch | null>(null);
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [showSources, setShowSources] = useState(false);
 
   useEffect(() => {
     loadResearch();
@@ -30,13 +34,24 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
     setLoading(true);
     setError(null);
     try {
+      // Step 1: Gather research
       const result = await researchIngredient(ingredient);
       setResearch(result);
+      setLoading(false);
+
+      // Step 2: AI synthesis
+      setSynthesizing(true);
+      if (result.aggregated) {
+        const recommendation = await synthesizeResearch(ingredient, result.aggregated);
+        setAiRecommendation(recommendation);
+      }
+      setSynthesizing(false);
     } catch (err) {
       setError('Failed to load research. Please try again.');
       console.error('Research error:', err);
+      setLoading(false);
+      setSynthesizing(false);
     }
-    setLoading(false);
   };
 
   const filteredEvidence = research?.evidence.filter(e => 
@@ -47,8 +62,8 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
     Linking.openURL(url);
   };
 
-  const getSafetyColor = (rating: string) => {
-    switch (rating) {
+  const getSafetyColor = (level: string) => {
+    switch (level) {
       case 'safe': return '#4CAF50';
       case 'generally_safe': return '#8BC34A';
       case 'caution': return '#FF9800';
@@ -57,13 +72,32 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
     }
   };
 
-  const getSafetyLabel = (rating: string) => {
-    switch (rating) {
-      case 'safe': return '✅ Safe';
-      case 'generally_safe': return '👍 Generally Safe';
-      case 'caution': return '⚠️ Use Caution';
-      case 'avoid': return '🚫 Avoid';
-      default: return '❓ Unknown';
+  const getSafetyIcon = (level: string) => {
+    switch (level) {
+      case 'safe': return '✅';
+      case 'generally_safe': return '👍';
+      case 'caution': return '⚠️';
+      case 'avoid': return '🚫';
+      default: return '❓';
+    }
+  };
+
+  const getSafetyLabel = (level: string) => {
+    switch (level) {
+      case 'safe': return 'Safe';
+      case 'generally_safe': return 'Generally Safe';
+      case 'caution': return 'Use Caution';
+      case 'avoid': return 'Avoid';
+      case 'insufficient_data': return 'More Research Needed';
+      default: return 'Unknown';
+    }
+  };
+
+  const getConfidenceLabel = (confidence: string) => {
+    switch (confidence) {
+      case 'high': return { text: 'High Confidence', color: '#4CAF50' };
+      case 'medium': return { text: 'Moderate Confidence', color: '#FF9800' };
+      default: return { text: 'Limited Evidence', color: '#9E9E9E' };
     }
   };
 
@@ -77,21 +111,13 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
     }
   };
 
-  const getConfidenceBadge = (confidence: string) => {
-    switch (confidence) {
-      case 'high': return { label: 'High', color: '#4CAF50' };
-      case 'medium': return { label: 'Medium', color: '#FF9800' };
-      default: return { label: 'Low', color: '#9E9E9E' };
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4CAF50" />
         <Text style={styles.loadingText}>🔬 Researching {ingredient}...</Text>
         <Text style={styles.loadingSubtext}>
-          Searching PubMed, Semantic Scholar, and regulatory databases
+          Searching PubMed, Semantic Scholar & web sources
         </Text>
       </View>
     );
@@ -112,6 +138,8 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
     );
   }
 
+  const confidenceInfo = aiRecommendation ? getConfidenceLabel(aiRecommendation.confidence) : null;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -119,7 +147,7 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
         <TouchableOpacity onPress={onClose}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Research</Text>
+        <Text style={styles.headerTitle}>Evidence</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -127,129 +155,190 @@ export default function EvidenceScreen({ ingredient, onClose }: Props) {
         {/* Ingredient Title */}
         <Text style={styles.ingredientName}>{ingredient}</Text>
         
-        {/* Summary Card */}
-        {research?.summary && (
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryHeader}>
+        {/* AI Recommendation Card */}
+        {synthesizing ? (
+          <View style={styles.aiCard}>
+            <View style={styles.aiCardLoading}>
+              <ActivityIndicator size="small" color="#4CAF50" />
+              <Text style={styles.aiCardLoadingText}>🧠 AI analyzing evidence...</Text>
+            </View>
+          </View>
+        ) : aiRecommendation ? (
+          <View style={styles.aiCard}>
+            {/* Safety Badge */}
+            <View style={styles.aiHeader}>
               <View style={[
-                styles.safetyBadge,
-                { backgroundColor: getSafetyColor(research.summary.safetyRating) }
+                styles.safetyBadgeLarge,
+                { backgroundColor: getSafetyColor(aiRecommendation.safetyLevel) }
               ]}>
-                <Text style={styles.safetyText}>
-                  {getSafetyLabel(research.summary.safetyRating)}
+                <Text style={styles.safetyIcon}>
+                  {getSafetyIcon(aiRecommendation.safetyLevel)}
+                </Text>
+                <Text style={styles.safetyLabelLarge}>
+                  {getSafetyLabel(aiRecommendation.safetyLevel)}
                 </Text>
               </View>
-              <Text style={styles.studyCount}>
-                {research.summary.totalStudies} studies found
-              </Text>
+              {confidenceInfo && (
+                <View style={[styles.confidenceBadge, { backgroundColor: confidenceInfo.color }]}>
+                  <Text style={styles.confidenceText}>{confidenceInfo.text}</Text>
+                </View>
+              )}
             </View>
 
-            {research.summary.regulatoryStatus.length > 0 && (
-              <View style={styles.regulatoryRow}>
-                <Text style={styles.regulatoryLabel}>Reviewed by:</Text>
-                {research.summary.regulatoryStatus.map((status, idx) => (
-                  <View key={idx} style={styles.regulatoryTag}>
-                    <Text style={styles.regulatoryTagText}>{status}</Text>
-                  </View>
+            {/* Summary */}
+            <Text style={styles.aiSummary}>{aiRecommendation.summary}</Text>
+
+            {/* Key Points */}
+            {aiRecommendation.keyPoints.length > 0 && (
+              <View style={styles.aiSection}>
+                <Text style={styles.aiSectionTitle}>📋 Key Findings</Text>
+                {aiRecommendation.keyPoints.map((point, idx) => (
+                  <Text key={idx} style={styles.aiBullet}>• {point}</Text>
                 ))}
               </View>
             )}
 
-            {research.summary.keyFindings.length > 0 && (
-              <View style={styles.findingsSection}>
-                <Text style={styles.findingsTitle}>Key Findings:</Text>
-                {research.summary.keyFindings.map((finding, idx) => (
-                  <Text key={idx} style={styles.findingText}>• {finding}</Text>
+            {/* Benefits */}
+            {aiRecommendation.benefits.length > 0 && (
+              <View style={styles.aiSection}>
+                <Text style={styles.aiSectionTitle}>✨ Potential Benefits</Text>
+                {aiRecommendation.benefits.map((benefit, idx) => (
+                  <Text key={idx} style={styles.aiBulletGreen}>• {benefit}</Text>
+                ))}
+              </View>
+            )}
+
+            {/* Concerns */}
+            {aiRecommendation.concerns.length > 0 && (
+              <View style={styles.aiSection}>
+                <Text style={styles.aiSectionTitle}>⚠️ Considerations</Text>
+                {aiRecommendation.concerns.map((concern, idx) => (
+                  <Text key={idx} style={styles.aiBulletOrange}>• {concern}</Text>
+                ))}
+              </View>
+            )}
+
+            {/* Recommendation */}
+            <View style={styles.recommendationBox}>
+              <Text style={styles.recommendationTitle}>🎯 Recommendation</Text>
+              <Text style={styles.recommendationText}>{aiRecommendation.recommendation}</Text>
+            </View>
+
+            {/* Citations */}
+            {aiRecommendation.citations.length > 0 && (
+              <View style={styles.citationsRow}>
+                <Text style={styles.citationsLabel}>
+                  Based on {aiRecommendation.citations.length} sources
+                </Text>
+                <TouchableOpacity onPress={() => setShowSources(!showSources)}>
+                  <Text style={styles.citationsToggle}>
+                    {showSources ? 'Hide' : 'Show'} citations
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {showSources && aiRecommendation.citations.length > 0 && (
+              <View style={styles.citationsList}>
+                {aiRecommendation.citations.map((citation, idx) => (
+                  <TouchableOpacity 
+                    key={idx}
+                    onPress={() => {
+                      const url = citation.startsWith('PMID:')
+                        ? `https://pubmed.ncbi.nlm.nih.gov/${citation.replace('PMID:', '')}`
+                        : citation.startsWith('DOI:')
+                        ? `https://doi.org/${citation.replace('DOI:', '')}`
+                        : null;
+                      if (url) openLink(url);
+                    }}
+                  >
+                    <Text style={styles.citationItem}>{citation}</Text>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
           </View>
-        )}
+        ) : null}
 
-        {/* Filter Tabs */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
+        {/* Show Raw Papers Toggle */}
+        <TouchableOpacity 
+          style={styles.sourcesToggle}
+          onPress={() => setShowSources(!showSources)}
         >
-          {['all', 'pubmed', 'semantic_scholar', 'regulatory', 'web'].map(type => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.filterTab,
-                selectedType === type && styles.filterTabActive
-              ]}
-              onPress={() => setSelectedType(type)}
+          <Text style={styles.sourcesToggleText}>
+            📚 View {research?.evidence.length || 0} Scientific Papers
+          </Text>
+        </TouchableOpacity>
+
+        {/* Filter Tabs (when showing papers) */}
+        {showSources && (
+          <>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterScroll}
             >
-              <Text style={[
-                styles.filterTabText,
-                selectedType === type && styles.filterTabTextActive
-              ]}>
-                {type === 'all' ? '📋 All' : 
-                 type === 'pubmed' ? '🔬 PubMed' :
-                 type === 'semantic_scholar' ? '📚 Papers' :
-                 type === 'regulatory' ? '🏛️ Regulatory' : '🌐 Web'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Evidence List */}
-        <View style={styles.evidenceList}>
-          {filteredEvidence.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No evidence found for this filter</Text>
-            </View>
-          ) : (
-            filteredEvidence.map((item, idx) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.evidenceCard}
-                onPress={() => openLink(item.url)}
-              >
-                <View style={styles.evidenceHeader}>
-                  <Text style={styles.evidenceIcon}>{getTypeIcon(item.type)}</Text>
-                  <Text style={styles.evidenceSource}>{item.source}</Text>
-                  {item.year && (
-                    <Text style={styles.evidenceYear}>{item.year}</Text>
-                  )}
-                  <View style={[
-                    styles.confidenceBadge,
-                    { backgroundColor: getConfidenceBadge(item.confidence).color }
+              {['all', 'pubmed', 'semantic_scholar', 'web'].map(type => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.filterTab,
+                    selectedType === type && styles.filterTabActive
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text style={[
+                    styles.filterTabText,
+                    selectedType === type && styles.filterTabTextActive
                   ]}>
-                    <Text style={styles.confidenceText}>
-                      {getConfidenceBadge(item.confidence).label}
-                    </Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.evidenceTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                
-                <Text style={styles.evidenceSummary} numberOfLines={3}>
-                  {item.summary}
-                </Text>
-
-                {item.citations !== undefined && item.citations > 0 && (
-                  <Text style={styles.citationCount}>
-                    📖 {item.citations} citations
+                    {type === 'all' ? '📋 All' : 
+                     type === 'pubmed' ? '🔬 PubMed' :
+                     type === 'semantic_scholar' ? '📚 Papers' : '🌐 Web'}
                   </Text>
-                )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-                {item.tags.length > 0 && (
-                  <View style={styles.tagContainer}>
-                    {item.tags.slice(0, 3).map((tag, i) => (
-                      <View key={i} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
+            {/* Evidence List */}
+            <View style={styles.evidenceList}>
+              {filteredEvidence.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No papers found for this filter</Text>
+                </View>
+              ) : (
+                filteredEvidence.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.evidenceCard}
+                    onPress={() => openLink(item.url)}
+                  >
+                    <View style={styles.evidenceHeader}>
+                      <Text style={styles.evidenceIcon}>{getTypeIcon(item.type)}</Text>
+                      <Text style={styles.evidenceSource}>{item.source}</Text>
+                      {item.year && (
+                        <Text style={styles.evidenceYear}>{item.year}</Text>
+                      )}
+                    </View>
+                    
+                    <Text style={styles.evidenceTitle} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    
+                    <Text style={styles.evidenceSummary} numberOfLines={3}>
+                      {item.summary}
+                    </Text>
+
+                    {item.citations !== undefined && item.citations > 0 && (
+                      <Text style={styles.citationCount}>
+                        📖 {item.citations} citations
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </>
+        )}
 
         {/* Disclaimer */}
         <View style={styles.disclaimer}>
@@ -357,77 +446,164 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
   },
-  summaryCard: {
+  // AI Card Styles
+  aiCard: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  safetyBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
     borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
   },
-  safetyText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  studyCount: {
-    marginLeft: 'auto',
-    fontSize: 13,
-    color: '#757575',
-  },
-  regulatoryRow: {
+  aiCardLoading: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    marginBottom: 12,
+    justifyContent: 'center',
+    padding: 20,
   },
-  regulatoryLabel: {
-    fontSize: 13,
-    color: '#616161',
-    marginRight: 8,
-  },
-  regulatoryTag: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-  },
-  regulatoryTagText: {
-    fontSize: 12,
-    color: '#1565C0',
+  aiCardLoadingText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#4CAF50',
     fontWeight: '500',
   },
-  findingsSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 12,
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  findingsTitle: {
-    fontSize: 14,
+  safetyBadgeLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  safetyIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  safetyLabelLarge: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  confidenceBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  confidenceText: {
+    color: '#fff',
+    fontSize: 11,
     fontWeight: '600',
+  },
+  aiSummary: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#212121',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  aiSection: {
+    marginBottom: 16,
+  },
+  aiSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#424242',
     marginBottom: 8,
   },
-  findingText: {
-    fontSize: 13,
+  aiBullet: {
+    fontSize: 14,
     color: '#616161',
-    lineHeight: 20,
-    marginBottom: 4,
+    lineHeight: 22,
+    paddingLeft: 4,
   },
+  aiBulletGreen: {
+    fontSize: 14,
+    color: '#2E7D32',
+    lineHeight: 22,
+    paddingLeft: 4,
+  },
+  aiBulletOrange: {
+    fontSize: 14,
+    color: '#E65100',
+    lineHeight: 22,
+    paddingLeft: 4,
+  },
+  recommendationBox: {
+    backgroundColor: '#E8F5E9',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  recommendationTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1B5E20',
+    marginBottom: 8,
+  },
+  recommendationText: {
+    fontSize: 15,
+    color: '#2E7D32',
+    lineHeight: 22,
+  },
+  citationsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  citationsLabel: {
+    fontSize: 12,
+    color: '#9E9E9E',
+  },
+  citationsToggle: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  citationsList: {
+    marginTop: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  citationItem: {
+    fontSize: 11,
+    color: '#1976D2',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  // Sources Toggle
+  sourcesToggle: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  sourcesToggleText: {
+    fontSize: 15,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  // Filter Tabs
   filterScroll: {
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -450,6 +626,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  // Evidence List
   evidenceList: {
     paddingHorizontal: 16,
   },
@@ -489,17 +666,6 @@ const styles = StyleSheet.create({
   evidenceYear: {
     fontSize: 12,
     color: '#9E9E9E',
-    marginRight: 8,
-  },
-  confidenceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  confidenceText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: '600',
   },
   evidenceTitle: {
     fontSize: 15,
@@ -518,22 +684,7 @@ const styles = StyleSheet.create({
     color: '#9E9E9E',
     marginTop: 8,
   },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 10,
-    gap: 6,
-  },
-  tag: {
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  tagText: {
-    fontSize: 11,
-    color: '#757575',
-  },
+  // Disclaimer
   disclaimer: {
     marginHorizontal: 16,
     marginTop: 20,

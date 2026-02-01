@@ -19,10 +19,30 @@ export interface EvidenceItem {
   tags: string[];
 }
 
+// Aggregated research data for AI synthesis
+export interface AggregatedResearch {
+  papers: {
+    title: string;
+    abstract?: string;
+    tldr?: string;
+    pmid?: string;
+    doi?: string;
+    citationCount?: number;
+    year?: number;
+  }[];
+  webResults: {
+    title: string;
+    snippet: string;
+    url: string;
+  }[];
+  totalResults: number;
+}
+
 export interface IngredientResearch {
   ingredient: string;
   evidence: EvidenceItem[];
   summary: IngredientSummary;
+  aggregated: AggregatedResearch; // For AI synthesis
   lastUpdated: number;
 }
 
@@ -76,10 +96,44 @@ export async function researchIngredient(ingredient: string): Promise<Ingredient
   // Generate summary
   const summary = generateSummary(uniqueEvidence, ingredient);
 
+  // Aggregate raw data for AI synthesis
+  const aggregated: AggregatedResearch = {
+    papers: [
+      ...pubmedResults.articles.map(a => ({
+        title: a.title,
+        abstract: a.abstract,
+        pmid: a.pmid,
+        year: parseInt(a.pubDate) || undefined,
+      })),
+      ...sortedS2.map(p => ({
+        title: p.title,
+        abstract: p.abstract || undefined,
+        tldr: p.tldr || undefined,
+        doi: p.externalIds?.DOI,
+        citationCount: p.citationCount,
+        year: p.year || undefined,
+      })),
+    ],
+    webResults: [
+      ...healthContent.results.slice(0, 5).map(r => ({
+        title: r.title,
+        snippet: r.snippet,
+        url: r.url,
+      })),
+      ...regulatoryInfo.results.map(r => ({
+        title: r.title,
+        snippet: r.snippet,
+        url: r.url,
+      })),
+    ],
+    totalResults: pubmedResults.total + s2Results.total,
+  };
+
   return {
     ingredient,
     evidence: uniqueEvidence,
     summary,
+    aggregated,
     lastUpdated: Date.now(),
   };
 }
