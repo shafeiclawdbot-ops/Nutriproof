@@ -6,15 +6,17 @@ import { StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import ScannerScreen from './src/screens/ScannerScreen';
 import ProductScreen from './src/screens/ProductScreen';
+import ContributeScreen from './src/screens/ContributeScreen';
 import { Product, ScanResult } from './src/types/product';
 import { initDatabase } from './src/services/database';
 import { scanProduct } from './src/services/productService';
 
-type Screen = 'home' | 'scanner' | 'product';
+type Screen = 'home' | 'scanner' | 'product' | 'contribute';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [currentBarcode, setCurrentBarcode] = useState<string>('');
   const [fromCache, setFromCache] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -31,6 +33,7 @@ export default function App() {
 
   const handleScan = async (barcode: string) => {
     setScanning(true);
+    setCurrentBarcode(barcode);
     const result: ScanResult = await scanProduct(barcode);
     setScanning(false);
 
@@ -39,15 +42,27 @@ export default function App() {
       setFromCache(result.source === 'cache');
       setScreen('product');
     } else {
-      // Product not found - stay on scanner but could show toast
-      alert('Product not found in database');
+      // Product not found - offer to contribute
+      setCurrentProduct(null);
+      setScreen('contribute');
     }
   };
 
   const handleProductFromHistory = (product: Product) => {
     setCurrentProduct(product);
+    setCurrentBarcode(product.barcode);
     setFromCache(true);
     setScreen('product');
+  };
+
+  const handleContribute = () => {
+    setScreen('contribute');
+  };
+
+  const handleContributeSuccess = () => {
+    setScreen('home');
+    setCurrentProduct(null);
+    setCurrentBarcode('');
   };
 
   if (loading) {
@@ -64,7 +79,7 @@ export default function App() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Looking up product...</Text>
+        <Text style={styles.loadingText}>🐕 Sniffing for product...</Text>
         <StatusBar style="light" />
       </View>
     );
@@ -89,6 +104,21 @@ export default function App() {
             setScreen('home');
             setCurrentProduct(null);
           }}
+          onContribute={handleContribute}
+        />
+      )}
+      {screen === 'contribute' && (
+        <ContributeScreen
+          barcode={currentBarcode}
+          productName={currentProduct?.name}
+          onClose={() => {
+            if (currentProduct) {
+              setScreen('product');
+            } else {
+              setScreen('scanner');
+            }
+          }}
+          onSuccess={handleContributeSuccess}
         />
       )}
       <StatusBar style={screen === 'scanner' ? 'light' : 'auto'} />

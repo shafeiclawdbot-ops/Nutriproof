@@ -9,9 +9,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-ml-kit/text-recognition": "^2.0.0",
+    "@supabase/supabase-js": "^2.93.3",
     "axios": "^1.13.4",
     "expo": "~54.0.33",
     "expo-camera": "~17.0.10",
+    "expo-image-picker": "~17.0.10",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",

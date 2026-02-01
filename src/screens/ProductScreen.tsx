@@ -14,9 +14,11 @@ interface Props {
   product: Product;
   fromCache: boolean;
   onClose: () => void;
+  onContribute?: () => void;
 }
 
-export default function ProductScreen({ product, fromCache, onClose }: Props) {
+export default function ProductScreen({ product, fromCache, onClose, onContribute }: Props) {
+  const hasLimitedData = product.ingredients.length === 0 && !hasNutritionData(product.nutrition);
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -45,6 +47,20 @@ export default function ProductScreen({ product, fromCache, onClose }: Props) {
         <Text style={styles.name}>{product.name}</Text>
         {product.brand && <Text style={styles.brand}>{product.brand}</Text>}
         <Text style={styles.barcode}>Barcode: {product.barcode}</Text>
+
+        {/* Contribute Banner - Show when data is limited */}
+        {hasLimitedData && onContribute && (
+          <TouchableOpacity style={styles.contributeBanner} onPress={onContribute}>
+            <Text style={styles.contributeDog}>🐕‍🦺</Text>
+            <View style={styles.contributeText}>
+              <Text style={styles.contributeTitle}>Missing Data?</Text>
+              <Text style={styles.contributeSubtitle}>
+                Help others by adding ingredient info!
+              </Text>
+            </View>
+            <Text style={styles.contributeArrow}>→</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Ingredients */}
         <View style={styles.section}>
@@ -268,5 +284,37 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  contributeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  contributeDog: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  contributeText: {
+    flex: 1,
+  },
+  contributeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2E7D32',
+  },
+  contributeSubtitle: {
+    fontSize: 13,
+    color: '#4CAF50',
+    marginTop: 2,
+  },
+  contributeArrow: {
+    fontSize: 20,
+    color: '#4CAF50',
   },
 });
