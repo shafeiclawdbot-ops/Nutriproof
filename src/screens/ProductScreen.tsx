@@ -15,9 +15,10 @@ interface Props {
   fromCache: boolean;
   onClose: () => void;
   onContribute?: () => void;
+  onResearchIngredient?: (ingredient: string) => void;
 }
 
-export default function ProductScreen({ product, fromCache, onClose, onContribute }: Props) {
+export default function ProductScreen({ product, fromCache, onClose, onContribute, onResearchIngredient }: Props) {
   const hasLimitedData = product.ingredients.length === 0 && !hasNutritionData(product.nutrition);
   return (
     <View style={styles.container}>
@@ -67,14 +68,27 @@ export default function ProductScreen({ product, fromCache, onClose, onContribut
           <Text style={styles.sectionTitle}>🧪 Ingredients</Text>
           {product.ingredients.length > 0 ? (
             product.ingredients.map((ing, idx) => (
-              <View key={ing.id} style={styles.ingredientItem}>
-                <Text style={styles.ingredientText}>
-                  {idx + 1}. {ing.text}
-                </Text>
-              </View>
+              <TouchableOpacity 
+                key={ing.id} 
+                style={styles.ingredientItem}
+                onPress={() => onResearchIngredient?.(ing.text)}
+                disabled={!onResearchIngredient}
+              >
+                <View style={styles.ingredientRow}>
+                  <Text style={styles.ingredientText}>
+                    {idx + 1}. {ing.text}
+                  </Text>
+                  {onResearchIngredient && (
+                    <Text style={styles.researchButton}>🔬</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
             ))
           ) : (
             <Text style={styles.noData}>No ingredient data available for this product</Text>
+          )}
+          {product.ingredients.length > 0 && onResearchIngredient && (
+            <Text style={styles.ingredientHint}>Tap any ingredient to see scientific research</Text>
           )}
         </View>
 
@@ -232,12 +246,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   ingredientItem: {
-    paddingVertical: 6,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   ingredientText: {
     fontSize: 14,
     color: '#424242',
     lineHeight: 20,
+    flex: 1,
+  },
+  researchButton: {
+    fontSize: 18,
+    marginLeft: 8,
+  },
+  ingredientHint: {
+    fontSize: 12,
+    color: '#9E9E9E',
+    marginTop: 12,
+    fontStyle: 'italic',
   },
   noData: {
     fontSize: 14,

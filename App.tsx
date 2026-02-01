@@ -7,16 +7,18 @@ import HomeScreen from './src/screens/HomeScreen';
 import ScannerScreen from './src/screens/ScannerScreen';
 import ProductScreen from './src/screens/ProductScreen';
 import ContributeScreen from './src/screens/ContributeScreen';
+import EvidenceScreen from './src/screens/EvidenceScreen';
 import { Product, ScanResult } from './src/types/product';
 import { initDatabase } from './src/services/database';
 import { scanProduct } from './src/services/productService';
 
-type Screen = 'home' | 'scanner' | 'product' | 'contribute';
+type Screen = 'home' | 'scanner' | 'product' | 'contribute' | 'evidence';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentBarcode, setCurrentBarcode] = useState<string>('');
+  const [currentIngredient, setCurrentIngredient] = useState<string>('');
   const [fromCache, setFromCache] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -65,6 +67,11 @@ export default function App() {
     setCurrentBarcode('');
   };
 
+  const handleResearchIngredient = (ingredient: string) => {
+    setCurrentIngredient(ingredient);
+    setScreen('evidence');
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -105,6 +112,7 @@ export default function App() {
             setCurrentProduct(null);
           }}
           onContribute={handleContribute}
+          onResearchIngredient={handleResearchIngredient}
         />
       )}
       {screen === 'contribute' && (
@@ -119,6 +127,12 @@ export default function App() {
             }
           }}
           onSuccess={handleContributeSuccess}
+        />
+      )}
+      {screen === 'evidence' && (
+        <EvidenceScreen
+          ingredient={currentIngredient}
+          onClose={() => setScreen('product')}
         />
       )}
       <StatusBar style={screen === 'scanner' ? 'light' : 'auto'} />
