@@ -47,32 +47,38 @@ export default function ProductScreen({ product, fromCache, onClose }: Props) {
         <Text style={styles.barcode}>Barcode: {product.barcode}</Text>
 
         {/* Ingredients */}
-        {product.ingredients.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🧪 Ingredients</Text>
-            {product.ingredients.map((ing, idx) => (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧪 Ingredients</Text>
+          {product.ingredients.length > 0 ? (
+            product.ingredients.map((ing, idx) => (
               <View key={ing.id} style={styles.ingredientItem}>
                 <Text style={styles.ingredientText}>
                   {idx + 1}. {ing.text}
                 </Text>
               </View>
-            ))}
-          </View>
-        )}
+            ))
+          ) : (
+            <Text style={styles.noData}>No ingredient data available for this product</Text>
+          )}
+        </View>
 
         {/* Nutrition Facts */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📊 Nutrition (per 100g)</Text>
-          <View style={styles.nutritionGrid}>
-            <NutritionRow label="Energy" value={product.nutrition.energy_kcal} unit="kcal" />
-            <NutritionRow label="Fat" value={product.nutrition.fat} unit="g" />
-            <NutritionRow label="Saturated Fat" value={product.nutrition.saturated_fat} unit="g" />
-            <NutritionRow label="Carbs" value={product.nutrition.carbohydrates} unit="g" />
-            <NutritionRow label="Sugars" value={product.nutrition.sugars} unit="g" />
-            <NutritionRow label="Fiber" value={product.nutrition.fiber} unit="g" />
-            <NutritionRow label="Protein" value={product.nutrition.proteins} unit="g" />
-            <NutritionRow label="Salt" value={product.nutrition.salt} unit="g" />
-          </View>
+          {hasNutritionData(product.nutrition) ? (
+            <View style={styles.nutritionGrid}>
+              <NutritionRow label="Energy" value={product.nutrition.energy_kcal} unit="kcal" />
+              <NutritionRow label="Fat" value={product.nutrition.fat} unit="g" />
+              <NutritionRow label="Saturated Fat" value={product.nutrition.saturated_fat} unit="g" />
+              <NutritionRow label="Carbs" value={product.nutrition.carbohydrates} unit="g" />
+              <NutritionRow label="Sugars" value={product.nutrition.sugars} unit="g" />
+              <NutritionRow label="Fiber" value={product.nutrition.fiber} unit="g" />
+              <NutritionRow label="Protein" value={product.nutrition.proteins} unit="g" />
+              <NutritionRow label="Salt" value={product.nutrition.salt} unit="g" />
+            </View>
+          ) : (
+            <Text style={styles.noData}>No nutrition data available for this product</Text>
+          )}
         </View>
 
         {/* Additives */}
@@ -117,6 +123,10 @@ function NutritionRow({ label, value, unit }: { label: string; value?: number; u
       <Text style={styles.nutritionValue}>{value.toFixed(1)} {unit}</Text>
     </View>
   );
+}
+
+function hasNutritionData(nutrition: any): boolean {
+  return Object.values(nutrition).some(v => v !== undefined && v !== null);
 }
 
 const styles = StyleSheet.create({
@@ -212,6 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#424242',
     lineHeight: 20,
+  },
+  noData: {
+    fontSize: 14,
+    color: '#9E9E9E',
+    fontStyle: 'italic',
+    paddingVertical: 8,
   },
   nutritionGrid: {
     gap: 8,
