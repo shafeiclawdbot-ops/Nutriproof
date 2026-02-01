@@ -1,5 +1,5 @@
 // Barcode Scanner Screen
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
@@ -11,6 +11,8 @@ interface Props {
 export default function ScannerScreen({ onScan, onClose }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const lastScannedRef = useRef<string | null>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   if (!permission) {
     return (
@@ -36,12 +38,28 @@ export default function ScannerScreen({ onScan, onClose }: Props) {
     );
   }
 
-  const handleBarCodeScanned = ({ data }: BarcodeScanningResult) => {
+  const handleBarCodeScanned = useCallback(({ data }: BarcodeScanningResult) => {
+    // Prevent duplicate scans of same barcode or rapid re-scans
     if (scanned) return;
+    if (lastScannedRef.current === data) return;
+    
+    // Clear any pending timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+    
     setScanned(true);
+    lastScannedRef.current = data;
+    
+    // Call onScan only once
     onScan(data);
-    setTimeout(() => setScanned(false), 2000);
-  };
+    
+    // Reset after 3 seconds to allow re-scanning different barcode
+    scanTimeoutRef.current = setTimeout(() => {
+      setScanned(false);
+      lastScannedRef.current = null;
+    }, 3000);
+  }, [scanned, onScan]);
 
   return (
     <View style={styles.container}>

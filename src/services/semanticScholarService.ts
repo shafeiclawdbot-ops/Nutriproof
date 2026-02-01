@@ -5,6 +5,14 @@ import axios from 'axios';
 const S2_BASE = 'https://api.semanticscholar.org/graph/v1';
 const S2_PARTNER_BASE = 'https://api.semanticscholar.org/partner/v1'; // For TLDR
 
+// Simple in-memory cache (5 minute TTL)
+const searchCache = new Map<string, { data: S2SearchResult; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Rate limit tracking
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
+
 export interface S2Paper {
   paperId: string;
   title: string;
@@ -37,6 +45,23 @@ export async function searchSemanticScholar(
   query: string,
   maxResults: number = 10
 ): Promise<S2SearchResult> {
+  const cacheKey = `${query}:${maxResults}`;
+  
+  // Check cache first
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log('Semantic Scholar: returning cached result');
+    return cached.data;
+  }
+
+  // Rate limiting - wait if needed
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest));
+  }
+  lastRequestTime = Date.now();
+
   try {
     const url = `${S2_BASE}/paper/search`;
     const params = {
@@ -87,11 +112,16 @@ export async function searchSemanticScholar(
       externalIds: paper.externalIds || {},
     }));
 
-    return {
+    const result: S2SearchResult = {
       total: data.total || papers.length,
       papers,
       query,
     };
+
+    // Cache the result
+    searchCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    
+    return result;
   } catch (error) {
     console.error('Semantic Scholar search error:', error);
     return { total: 0, papers: [], query };

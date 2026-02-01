@@ -4,7 +4,30 @@ import { fetchProduct } from './openFoodFacts';
 import { getCachedProduct, cacheProduct } from './database';
 import { getCommunityProduct, isSupabaseConfigured } from './supabaseService';
 
+// Track in-flight requests to prevent duplicates
+const pendingRequests = new Map<string, Promise<ScanResult>>();
+
 export async function scanProduct(barcode: string): Promise<ScanResult> {
+  // If there's already a request for this barcode, return the same promise
+  const pending = pendingRequests.get(barcode);
+  if (pending) {
+    console.log(`Request already in flight for ${barcode}, reusing...`);
+    return pending;
+  }
+
+  // Create and track the request
+  const request = scanProductInternal(barcode);
+  pendingRequests.set(barcode, request);
+  
+  try {
+    return await request;
+  } finally {
+    // Clean up after completion
+    pendingRequests.delete(barcode);
+  }
+}
+
+async function scanProductInternal(barcode: string): Promise<ScanResult> {
   // 1. Check local cache first
   const cached = await getCachedProduct(barcode);
   if (cached) {
