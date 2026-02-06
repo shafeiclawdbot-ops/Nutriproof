@@ -1,0 +1,21 @@
+# Daily Drops — 2026-02-06 (Fri)
+
+## Trending AI / Tech News
+- **Anthropic: Claude Opus 4.6** — official release + details. <https://www.anthropic.com/news/claude-opus-4-6>
+- **OpenAI: GPT-5.3-Codex** — new Codex model announcement. <https://openai.com/index/introducing-gpt-5-3-codex/>
+- **Anthropic engineering write-up**: using agent teams to build a C compiler (nice “agentic coding” case study). <https://www.anthropic.com/engineering/building-c-compiler>
+- **Claude Code docs**: “Orchestrate teams of Claude Code sessions” (useful patterns for our agent workflow). <https://code.claude.com/docs/en/agent-teams>
+
+## Interesting GitHub Repos (AI / Mobile / Health-tech)
+- **linkedin-extension-fingerprinting** — LinkedIn checks for ~3k browser extensions (privacy/security + detection techniques). <https://github.com/mdp/linkedin-extension-fingerprinting>
+- **Artifact Keeper** — open-source Artifactory/Nexus alternative in Rust (relevant if we ever want self-hosted artifact storage). <https://github.com/artifact-keeper>
+
+## Business Ideas / Opportunities
+- **“Company as Code”** — treat company operations as version-controlled artifacts (good inspiration for our internal SOPs/templates). <https://blog.42futures.com/p/company-as-code>
+- **Data moat angle for Nutriproof**: combine Open Food Facts + enrichment pipelines (e.g., store photo OCR → ingredients → normalized additives/allergens), then offer an API tier.
+
+## Useful Tools / APIs
+- **Spike Nutrition API** (aggregates USDA + Open Food Facts + others behind one API) — potential fallback/enrichment source. <https://www.spikeapi.com/blog/top-nutrition-apis-for-developers-2026>
+- **FatSecret API** — commonly cited for barcode hit rate + nutrition DB coverage (paid, but strong coverage). <https://platform.fatsecret.com/api/>
+- **Apify actor for Open Food Facts enrichment** — tooling idea for automated product intelligence/enrichment. <https://apify.com/benthepythondev/open-food-facts-product-intelligence>
+- **OpenNutrition (ODbL)** — open nutrition database initiative (watch for viability/coverage). <https://www.reddit.com/r/opensource/comments/1jui248/opennutrition_a_free_odbllicensed_nutrition/>
