@@ -20,3 +20,14 @@
 - **Model Context Protocol (MCP)** — becoming the interoperability layer for agent tooling; worth aligning Nutriproof internal tools around it (e.g., OFF + PubMed fetchers as MCP servers). <https://github.com/modelcontextprotocol>
 - **Open Food Facts API** — keep as primary open product source; combine with enrichment pipelines for moat (OCR → ingredients normalization → additive lookup). <https://world.openfoodfacts.org/data>
 - **PubMed E-utilities** — reliable entry point for PMID-based citation fetching (essential for Nutriproof evidence-first UX). <https://www.ncbi.nlm.nih.gov/books/NBK25501/>
+
+### Additional signals (quick scan)
+- **Capex arms race continues**: Big Tech AI spending projected to approach **$700B in 2026** (Google/Microsoft/Meta/Amazon capex up; cashflow pressure). <https://www.cnbc.com/2026/02/06/google-microsoft-meta-amazon-ai-cash.html>
+- **GitHub Copilot SDK (preview)**: “agentic CI” framing + SDK that can plan, invoke tools, edit files, and run commands programmatically. <https://github.blog/ai-and-ml/generative-ai/continuous-ai-in-practice-what-developers-can-automate-today-with-agentic-ci/>
+
+## Interesting GitHub Repos (more)
+- **ashishpatel26/500-AI-Agents-Projects** — huge curated list of agent use cases + links to implementations (good inspiration bank). <https://github.com/ashishpatel26/500-AI-Agents-Projects>
+
+## Useful Resources (more)
+- **Epoch AI model database** — public dataset tracking 3,200+ ML models; handy for trend charts/benchmarks (updated Feb 2026). <https://epoch.ai/data>
+- **Nature (Protein2PAM)** — example of protein language models applied to CRISPR PAM specificity prediction (good “AI in bio” signal). <https://www.nature.com/subjects/machine-learning>
